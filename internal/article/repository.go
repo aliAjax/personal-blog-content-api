@@ -153,8 +153,14 @@ func (r *repository) Update(ctx context.Context, a *Article, tagIDs []int64) err
 	if err != nil {
 		return err
 	}
-	if err := replaceTags(ctx, tx, a.ID, tagIDs); err != nil {
-		return err
+	// A nil tagIDs means the client omitted tag_ids from the request: keep the
+	// article's existing tags untouched. A non-nil slice (including an empty
+	// one) replaces the set. This lets a title-only edit preserve tags while a
+	// request that sends "tag_ids": [] still clears them.
+	if tagIDs != nil {
+		if err := replaceTags(ctx, tx, a.ID, tagIDs); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
