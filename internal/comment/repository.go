@@ -14,6 +14,7 @@ type Repository interface {
 	UpdateStatus(ctx context.Context, id int64, status string) error
 	Delete(ctx context.Context, id int64) error
 	ArticleExistsPublished(ctx context.Context, articleID int64) (bool, error)
+	ParentBelongsToArticle(ctx context.Context, parentID, articleID int64) (bool, error)
 }
 
 type repository struct {
@@ -92,6 +93,17 @@ func (r *repository) ArticleExistsPublished(ctx context.Context, articleID int64
 	if err := r.db.QueryRowContext(ctx,
 		"SELECT COUNT(*) FROM articles WHERE id = ? AND status = 'published'",
 		articleID,
+	).Scan(&count); err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *repository) ParentBelongsToArticle(ctx context.Context, parentID, articleID int64) (bool, error) {
+	var count int
+	if err := r.db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM comments WHERE id = ? AND article_id = ?",
+		parentID, articleID,
 	).Scan(&count); err != nil {
 		return false, err
 	}
