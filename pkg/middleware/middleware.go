@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"strings"
@@ -27,14 +28,57 @@ type Claims struct {
 
 func Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buffered := newBufferedResponse(w)
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				logger.Error("panic recovered", "panic", recovered)
 				response.Error(w, http.StatusInternalServerError, "服务器内部错误")
+				return
 			}
+			buffered.commit()
 		}()
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(buffered, r)
 	})
+}
+
+type bufferedResponse struct {
+	target http.ResponseWriter
+	header http.Header
+	body   bytes.Buffer
+	status int
+}
+
+func newBufferedResponse(target http.ResponseWriter) *bufferedResponse {
+	return &bufferedResponse{target: target, header: make(http.Header)}
+}
+
+func (w *bufferedResponse) Header() http.Header {
+	return w.header
+}
+
+func (w *bufferedResponse) WriteHeader(status int) {
+	if w.status == 0 {
+		w.status = status
+	}
+}
+
+func (w *bufferedResponse) Write(data []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	return w.body.Write(data)
+}
+
+func (w *bufferedResponse) commit() {
+	for key, values := range w.header {
+		w.target.Header()[key] = append([]string(nil), values...)
+	}
+	status := w.status
+	if status == 0 {
+		status = http.StatusOK
+	}
+	w.target.WriteHeader(status)
+	_, _ = w.target.Write(w.body.Bytes())
 }
 
 func CORS(next http.Handler) http.Handler {

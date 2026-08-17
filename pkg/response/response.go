@@ -1,6 +1,7 @@
 package response
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 )
@@ -10,11 +11,14 @@ type ErrorBody struct {
 }
 
 func JSON(w http.ResponseWriter, status int, payload any) {
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		Error(w, http.StatusInternalServerError, "响应编码失败")
+		return
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	_, _ = w.Write(body.Bytes())
 }
 
 func Error(w http.ResponseWriter, status int, message string) {
