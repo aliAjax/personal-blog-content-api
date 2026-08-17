@@ -14,6 +14,7 @@ type Repository interface {
 	UpdateStatus(ctx context.Context, id int64, status string) error
 	Delete(ctx context.Context, id int64) error
 	ArticleExistsPublished(ctx context.Context, articleID int64) (bool, error)
+	ParentBelongsToArticle(ctx context.Context, parentID, articleID int64) (bool, error)
 }
 
 type repository struct {
@@ -65,6 +66,7 @@ func (r *repository) FindByID(ctx context.Context, id int64) (*Comment, error) {
 }
 
 func (r *repository) Create(ctx context.Context, c *Comment) error {
+	c.ParentID = cloneParentID(c.ParentID)
 	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO comments (article_id, parent_id, author_name, author_email, content, status)
 		VALUES (?, ?, ?, ?, ?, ?)`,
@@ -75,6 +77,18 @@ func (r *repository) Create(ctx context.Context, c *Comment) error {
 	}
 	c.ID, err = result.LastInsertId()
 	return err
+}
+
+func (r *repository) ParentBelongsToArticle(ctx context.Context, parentID, articleID int64) (bool, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM comments WHERE id = ? AND article_id = ?",
+		parentID, articleID,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (r *repository) UpdateStatus(ctx context.Context, id int64, status string) error {

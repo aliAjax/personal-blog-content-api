@@ -53,7 +53,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	c, err := h.service.Create(r.Context(), CreateInput{
 		ArticleID:   articleID,
-		ParentID:    req.ParentID,
+		ParentID:    cloneParentID(req.ParentID),
 		AuthorName:  req.AuthorName,
 		AuthorEmail: req.AuthorEmail,
 		Content:     req.Content,
@@ -62,6 +62,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		status := http.StatusBadRequest
 		if errors.Is(err, ErrArticleClosed) {
 			status = http.StatusNotFound
+		}
+		if errors.Is(err, ErrInvalidParent) {
+			status = http.StatusUnprocessableEntity
 		}
 		response.Error(w, status, err.Error())
 		return

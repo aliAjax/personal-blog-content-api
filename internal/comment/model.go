@@ -26,3 +26,11 @@ type ListFilter struct {
 	ArticleID int64
 	Status    string
 }
+
+func cloneParentID(id *int64) *int64 {
+	if id == nil {
+		return nil
+	}
+	value := *id
+	return &value
+}

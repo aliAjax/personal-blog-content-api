@@ -10,6 +10,7 @@ var (
 	ErrNotFound      = errors.New("评论不存在")
 	ErrInvalidStatus = errors.New("评论状态只能是 pending、approved 或 rejected")
 	ErrArticleClosed = errors.New("文章不存在或未发布")
+	ErrInvalidParent = errors.New("父评论不属于当前文章")
 )
 
 type Service interface {
@@ -53,10 +54,19 @@ func (s *service) Create(ctx context.Context, input CreateInput) (*Comment, erro
 	if !exists {
 		return nil, ErrArticleClosed
 	}
+	if input.ParentID != nil {
+		valid, err := s.repo.ParentBelongsToArticle(ctx, *input.ParentID, input.ArticleID)
+		if err != nil {
+			return nil, err
+		}
+		if !valid {
+			return nil, ErrInvalidParent
+		}
+	}
 
 	c := &Comment{
 		ArticleID:   input.ArticleID,
-		ParentID:    input.ParentID,
+		ParentID:    cloneParentID(input.ParentID),
 		AuthorName:  strings.TrimSpace(input.AuthorName),
 		AuthorEmail: strings.TrimSpace(input.AuthorEmail),
 		Content:     strings.TrimSpace(input.Content),
