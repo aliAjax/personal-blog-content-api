@@ -71,7 +71,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		TagIDs:     req.TagIDs,
 	})
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error())
+		status := http.StatusBadRequest
+		if errors.Is(err, ErrConflict) {
+			status = http.StatusConflict
+		}
+		response.Error(w, status, err.Error())
 		return
 	}
 	response.JSON(w, http.StatusCreated, a)
@@ -101,6 +105,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		status := http.StatusBadRequest
 		if errors.Is(err, ErrNotFound) {
 			status = http.StatusNotFound
+		}
+		if errors.Is(err, ErrConflict) {
+			status = http.StatusConflict
 		}
 		response.Error(w, status, err.Error())
 		return
