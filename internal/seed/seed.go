@@ -8,6 +8,7 @@ import (
 
 	"github.com/example/blog-api/pkg/config"
 	"github.com/example/blog-api/pkg/logger"
+	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -91,6 +92,9 @@ func ensureAdmin(ctx context.Context, db *sql.DB, username, password string) (in
 		username, string(hash),
 	)
 	if err != nil {
+		if isDuplicateKey(err) {
+			return lookupID(ctx, db, "SELECT id FROM users WHERE username = ?", username)
+		}
 		return 0, err
 	}
 	return result.LastInsertId()
@@ -111,6 +115,9 @@ func ensureCategory(ctx context.Context, db *sql.DB, name, slugValue, descriptio
 		name, slugValue, description,
 	)
 	if err != nil {
+		if isDuplicateKey(err) {
+			return lookupID(ctx, db, "SELECT id FROM categories WHERE slug = ?", slugValue)
+		}
 		return 0, err
 	}
 	return result.LastInsertId()
@@ -128,6 +135,9 @@ func ensureTag(ctx context.Context, db *sql.DB, name, slugValue string) (int64, 
 
 	result, err := db.ExecContext(ctx, "INSERT INTO tags (name, slug) VALUES (?, ?)", name, slugValue)
 	if err != nil {
+		if isDuplicateKey(err) {
+			return lookupID(ctx, db, "SELECT id FROM tags WHERE slug = ?", slugValue)
+		}
 		return 0, err
 	}
 	return result.LastInsertId()
@@ -165,9 +175,25 @@ func ensureArticle(
 		userID, category, title, slugValue, excerpt, content, status, publishedAt,
 	)
 	if err != nil {
+		if isDuplicateKey(err) {
+			return lookupID(ctx, db, "SELECT id FROM articles WHERE slug = ?", slugValue)
+		}
 		return 0, err
 	}
 	return result.LastInsertId()
+}
+
+func isDuplicateKey(err error) bool {
+	var mysqlErr *mysql.MySQLError
+	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
+}
+
+func lookupID(ctx context.Context, db *sql.DB, query string, value any) (int64, error) {
+	var id int64
+	if err := db.QueryRowContext(ctx, query, value).Scan(&id); err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func linkTags(ctx context.Context, db *sql.DB, articleID int64, tagIDs []int64) error {
