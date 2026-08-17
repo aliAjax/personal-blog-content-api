@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/blog-api/pkg/slug"
+	"github.com/go-sql-driver/mysql"
 )
 
 var (
 	ErrNotFound      = errors.New("文章不存在")
 	ErrInvalidStatus = errors.New("文章状态只能是 draft 或 published")
+	ErrConflict      = errors.New("文章 slug 已存在")
 )
 
 type Service interface {
@@ -59,10 +60,7 @@ func (s *service) Create(ctx context.Context, input CreateInput) (*Article, erro
 		return nil, err
 	}
 	title := strings.TrimSpace(input.Title)
-	slugValue := strings.TrimSpace(input.Slug)
-	if slugValue == "" {
-		slugValue = slug.Make(title)
-	}
+	slugValue := normalizedSlug(input.Slug, title)
 
 	a := &Article{
 		UserID:      input.UserID,
@@ -76,7 +74,7 @@ func (s *service) Create(ctx context.Context, input CreateInput) (*Article, erro
 		Tags:        make([]Tag, 0),
 	}
 	if err := s.repo.Create(ctx, a, input.TagIDs); err != nil {
-		return nil, err
+		return nil, classifyWriteError(err)
 	}
 	return s.repo.FindByID(ctx, a.ID, false)
 }
@@ -105,10 +103,7 @@ func (s *service) Update(ctx context.Context, id int64, input UpdateInput) (*Art
 		return nil, err
 	}
 	title := strings.TrimSpace(input.Title)
-	slugValue := strings.TrimSpace(input.Slug)
-	if slugValue == "" {
-		slugValue = slug.Make(title)
-	}
+	slugValue := normalizedSlug(input.Slug, title)
 
 	current.CategoryID = input.CategoryID
 	current.Title = title
@@ -118,7 +113,7 @@ func (s *service) Update(ctx context.Context, id int64, input UpdateInput) (*Art
 	current.Status = normalized
 	current.PublishedAt = publishedAt
 	if err := s.repo.Update(ctx, current, input.TagIDs); err != nil {
-		return nil, err
+		return nil, classifyWriteError(err)
 	}
 	return s.repo.FindByID(ctx, current.ID, false)
 }
@@ -180,4 +175,12 @@ func tagIDsOf(tags []Tag) []int64 {
 		ids = append(ids, t.ID)
 	}
 	return ids
+}
+
+func classifyWriteError(err error) error {
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+		return ErrConflict
+	}
+	return err
 }

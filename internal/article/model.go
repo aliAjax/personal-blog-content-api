@@ -1,6 +1,11 @@
 package article
 
-import "time"
+import (
+	"strings"
+	"time"
+
+	"github.com/example/blog-api/pkg/slug"
+)
 
 type Article struct {
 	ID          int64      `json:"id"`
@@ -57,4 +62,12 @@ type ListFilter struct {
 	TagID         int64
 	Query         string
 	PublishedOnly bool
+}
+
+func normalizedSlug(input, title string) string {
+	value := strings.TrimSpace(input)
+	if value == "" {
+		return slug.Make(title)
+	}
+	return value
 }

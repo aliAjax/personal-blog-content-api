@@ -114,7 +114,7 @@ func (r *repository) FindByID(ctx context.Context, id int64, publishedOnly bool)
 func (r *repository) Create(ctx context.Context, a *Article, tagIDs []int64) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return classifyWriteError(err)
 	}
 	defer tx.Rollback()
 
@@ -125,7 +125,7 @@ func (r *repository) Create(ctx context.Context, a *Article, tagIDs []int64) err
 		a.UserID, a.CategoryID, a.Title, a.Slug, a.Excerpt, a.Content, a.Status, a.PublishedAt,
 	)
 	if err != nil {
-		return err
+		return classifyWriteError(err)
 	}
 	a.ID, err = result.LastInsertId()
 	if err != nil {
