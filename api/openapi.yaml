@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: Blog API
+  version: 1.0.0
+  description: Go 个人博客后台 API
+servers:
+  - url: http://localhost:18095/api/v1
+paths:
+  /auth/login:
+    post:
+      summary: 登录并获取 JWT
+      responses:
+        "200":
+          description: 登录成功
+  /articles:
+    get:
+      summary: 浏览已发布文章
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: tag_id
+          in: query
+          schema:
+            type: integer
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 文章列表
