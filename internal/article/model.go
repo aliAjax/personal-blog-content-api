@@ -58,3 +58,10 @@ type ListFilter struct {
 	Query         string
 	PublishedOnly bool
 }
+
+func cloneTagIDs(ids []int64) []int64 {
+	if ids == nil {
+		return nil
+	}
+	return append([]int64(nil), ids...)
+}

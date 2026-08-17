@@ -138,6 +138,7 @@ func (r *repository) Create(ctx context.Context, a *Article, tagIDs []int64) err
 }
 
 func (r *repository) Update(ctx context.Context, a *Article, tagIDs []int64) error {
+	tagIDs = cloneTagIDs(tagIDs)
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -153,8 +154,10 @@ func (r *repository) Update(ctx context.Context, a *Article, tagIDs []int64) err
 	if err != nil {
 		return err
 	}
-	if err := replaceTags(ctx, tx, a.ID, tagIDs); err != nil {
-		return err
+	if tagIDs != nil {
+		if err := replaceTags(ctx, tx, a.ID, tagIDs); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }

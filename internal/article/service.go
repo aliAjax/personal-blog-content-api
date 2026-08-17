@@ -75,7 +75,7 @@ func (s *service) Create(ctx context.Context, input CreateInput) (*Article, erro
 		PublishedAt: publishedAt,
 		Tags:        make([]Tag, 0),
 	}
-	if err := s.repo.Create(ctx, a, input.TagIDs); err != nil {
+	if err := s.repo.Create(ctx, a, cloneTagIDs(input.TagIDs)); err != nil {
 		return nil, err
 	}
 	return s.repo.FindByID(ctx, a.ID, false)
@@ -117,7 +117,7 @@ func (s *service) Update(ctx context.Context, id int64, input UpdateInput) (*Art
 	current.Content = input.Content
 	current.Status = normalized
 	current.PublishedAt = publishedAt
-	if err := s.repo.Update(ctx, current, input.TagIDs); err != nil {
+	if err := s.repo.Update(ctx, current, cloneTagIDs(input.TagIDs)); err != nil {
 		return nil, err
 	}
 	return s.repo.FindByID(ctx, current.ID, false)
@@ -149,7 +149,7 @@ func (s *service) SetStatus(ctx context.Context, id int64, status string) (*Arti
 	}
 	current.Status = normalized
 	current.PublishedAt = publishedAt
-	if err := s.repo.Update(ctx, current, tagIDsOf(current.Tags)); err != nil {
+	if err := s.repo.Update(ctx, current, nil); err != nil {
 		return nil, err
 	}
 	return s.repo.FindByID(ctx, current.ID, false)

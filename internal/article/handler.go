@@ -68,7 +68,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Excerpt:    req.Excerpt,
 		Content:    req.Content,
 		Status:     req.Status,
-		TagIDs:     req.TagIDs,
+		TagIDs:     cloneTagIDs(req.TagIDs),
 	})
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, err.Error())
@@ -95,7 +95,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		Excerpt:    req.Excerpt,
 		Content:    req.Content,
 		Status:     req.Status,
-		TagIDs:     req.TagIDs,
+		TagIDs:     cloneTagIDs(req.TagIDs),
 	})
 	if err != nil {
 		status := http.StatusBadRequest
